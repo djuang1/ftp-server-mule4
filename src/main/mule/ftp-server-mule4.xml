@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:os="http://www.mulesoft.org/schema/mule/os"
+	xmlns:java="http://www.mulesoft.org/schema/mule/java" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/java http://www.mulesoft.org/schema/mule/java/current/mule-java.xsd
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd">
+
+<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="7c8d4312-8921-40ef-a1ba-996ea6e3ae58" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<configuration-properties doc:name="Configuration properties" doc:id="27dda135-ab21-47c4-87f2-c92c9add77d0" file="mule-properties.yaml" />
+	<flow name="sftp-serverFlow" doc:id="db94e6e4-f229-4f13-8f4c-1c0a02516eaf" >
+		<http:listener doc:name="/ftp" doc:id="d0091fb2-cd11-48f4-b94c-b19489873860" config-ref="HTTP_Listener_config" path="/ftp"/>
+		<set-variable value="#[attributes.queryParams.action]" doc:name="Set Variable" doc:id="ac376801-49ee-41e7-975d-c5841ad27e7a" variableName="action"/>
+		<java:new doc:name="New" doc:id="59d74e3c-4b20-4b81-9edb-ae6c75377e97" class="com.dejim.MuleFtpServer" constructor="MuleFtpServer(int,java.lang.String)">
+			<java:args><![CDATA[#[%dw 2.0
+output application/java
+---
+{
+	arg0: p('ftp.port'),
+	arg1: p('ftp.password')
+}]]]></java:args>
+		</java:new>
+		<choice doc:name="Choice" doc:id="2f7d1926-3395-420f-8088-aa6c7e05d2df" >
+			<when expression='#[vars.action == "start"]'>
+				<java:invoke doc:name="Invoke" doc:id="904a1564-c0a3-41cc-932c-086e36cf9668" instance="#[payload]" class="com.dejim.MuleFtpServer" method="start()" />
+			</when>
+			<otherwise >
+				<java:invoke method="stop()" doc:name="Invoke" doc:id="6c9ca522-e814-4a51-a5d0-61c0073caa01" instance="#[payload]" class="com.dejim.MuleFtpServer"/>
+			</otherwise>
+		</choice>
+		<ee:transform doc:name="Transform Message" doc:id="5c1b03e1-7df2-4e5d-bb22-72b480a70112" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+</mule>
